@@ -4,7 +4,7 @@ Luferov Victor <lyferov@yandex.ru>
 Membership functions
 """
 
-from typing import List
+from typing import List, Tuple
 from abc import ABC, abstractmethod
 import numpy as np
 from .types import MfCompositionType
@@ -14,6 +14,10 @@ class MembershipFunction(ABC):
     """
     Abstract class of MF
     """
+    @property
+    @abstractmethod
+    def sup(self) -> float:
+        ...
 
     @abstractmethod
     def get_value(self, x: float) -> float:
@@ -28,6 +32,10 @@ class NormalMF(MembershipFunction):
     def get_value(self, x: float) -> float:
         return np.exp(-(x - self.b) ** 2 / (2 * self.sigma ** 2))
 
+    @property
+    def sup(self) -> float:
+        return 1.0
+
 
 class ConstantMF(MembershipFunction):
     """
@@ -41,6 +49,21 @@ class ConstantMF(MembershipFunction):
 
     def get_value(self, x: float) -> float:
         return self.value
+
+    @property
+    def sup(self) -> float:
+        return 1.0
+
+
+class PointsMF(MembershipFunction):
+    """
+    Points MF
+    """
+    def __init__(self, points: List[Tuple[float, float]]):
+        self.points: List[Tuple[float, float]] = points
+
+    def get_value(self, x: float) -> float:
+        pass
 
 
 class TriangularMF(MembershipFunction):
@@ -73,6 +96,10 @@ class TriangularMF(MembershipFunction):
     def to_normal(self) -> NormalMF:
         return NormalMF(self.x2, (self.x3 - self.x1) / 5.0)
 
+    @property
+    def sup(self) -> float:
+        return 1.0
+
 
 class TrapezoidMF(MembershipFunction):
     """
@@ -102,6 +129,10 @@ class TrapezoidMF(MembershipFunction):
         else:
             return float(0)
 
+    @property
+    def sup(self) -> float:
+        return 1
+
 
 class CompositeMF(MembershipFunction):
     """
@@ -126,3 +157,7 @@ class CompositeMF(MembershipFunction):
     
     def get_value(self, x: float) -> float:
         return self.__compose([mf.get_value(x) for mf in self.mfs])
+
+    @property
+    def sup(self) -> float:
+        return 1.0

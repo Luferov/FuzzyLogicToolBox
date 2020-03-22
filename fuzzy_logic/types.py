@@ -15,3 +15,30 @@ class MfCompositionType(Enum):
     MAX = 2
     PROD = 3
     SUM = 4
+
+
+class AndMethod(Enum):
+    """
+    Method and
+    """
+    MIN = 1     # min(a, b)
+    PROD = 2    # a * b
+
+
+class OrMethod(Enum):
+    MAX = 1     # max(a, b)
+    PROB = 2    # a + b - a * b
+
+
+class AggregationMethod(Enum):
+    MAX = 1
+    SUM = 2
+
+
+class DefuzzificationMethod(Enum):
+    """
+    Methods of defuzzification
+    """
+    CENTROID = 1
+    BISECTOR = 2
+    AVERAGE_MAXIMUM = 3
