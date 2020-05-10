@@ -42,3 +42,22 @@ class DefuzzificationMethod(Enum):
     CENTROID = 1
     BISECTOR = 2
     AVERAGE_MAXIMUM = 3
+
+
+class OperatorType(Enum):
+    """
+    Type of operator in fuzzy rule base
+    """
+    AND = 1
+    OR = 2
+
+
+class HedgeType(Enum):
+    """
+    Hedge modified for terms
+    """
+    NULL = 0
+    SLIGHTLY = 1
+    SOMEWHAT = 2
+    VERY = 3
+    EXTREMELY = 4
