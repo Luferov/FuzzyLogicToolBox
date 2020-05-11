@@ -4,17 +4,21 @@ Luferov Victor <lyferov@yandex.ru>
 Fuzzy Rules
 """
 from typing import List
-from abc import ABC, abstractmethod
 from .terms import Term
 from .types import OperatorType, HedgeType
-from .variables import FuzzyVariable, SugenoVariable
+from .variables import FuzzyVariable, SugenoVariable, SugenoFunction
 
 
 class SingleCondition:
+    """
+    Единичное заключение
+    FuzzyVariable - Term
+    SugenoVariable - SugenoFunction
+    """
 
-    def __init__(self, variable: [FuzzyVariable, SugenoVariable], term: Term, _not: bool = False):
+    def __init__(self, variable: [FuzzyVariable, SugenoVariable], term: [Term, SugenoFunction], _not: bool = False):
         self.variable: [FuzzyVariable, SugenoVariable] = variable
-        self.term: Term = term
+        self.term: [Term, SugenoFunction] = term
         self._not: bool = _not
 
 
@@ -33,7 +37,7 @@ class FuzzyCondition(SingleCondition):
 
     def __init__(self,
                  variable: [FuzzyVariable, SugenoVariable],
-                 term: Term,
+                 term: [Term, SugenoFunction],
                  _not: bool = False,
                  hedge: HedgeType = HedgeType.NULL):
 
@@ -41,42 +45,24 @@ class FuzzyCondition(SingleCondition):
         self.hedge: HedgeType = hedge
 
 
-class ParsableRule(ABC):
+class FuzzyRule:
+    """
+    Обобщенная модель нечеткого правила
+        - Нечеткое условие "condition" для Sugeno и Mamdani одинаковые
 
-    @property
-    @abstractmethod
-    def condition(self) -> Conditions:
-        """
-        getter path of "if" in condition
-        :return:
-        """
-        ...
+        - Нечеткое заключение conclusion для Sugeno
+            conclusion: SingleConclusion = SingleConclusion(SugenoVariable, SugenoFunction, not?)
+         - Нечеткое заключение conclusion для Mamdani
+            conclusion: SingleConclusion = SingleConclusion(FuzzyVariable, Term, not?)
+    """
 
-    @condition.setter
-    @abstractmethod
-    def condition(self, value: Conditions):
+    def __init__(self, condition: Conditions, conclusion: SingleCondition, weight: float = 1.):
         """
-        setter path of "if" in condition
-        :param value:
-        :return:
+        Конструктоур нечеткого правила мамдани
+        :param condition: условие в блоке IF
+        :param conclusion: условие в блоке THEN
+        :param weight: дополнительный вес правила
         """
-        ...
-
-    @property
-    @abstractmethod
-    def single_condition(self) -> SingleCondition:
-        """
-        getter path of "then" in condition
-        :return:
-        """
-        ...
-
-    @single_condition.setter
-    @abstractmethod
-    def single_condition(self, value: SingleCondition):
-        """
-        setter path of "then" in condition
-        :param value:
-        :return:
-        """
-        ...
+        self.condition: Conditions = condition
+        self.conclusion: SingleCondition = conclusion
+        self.weight: float = weight
