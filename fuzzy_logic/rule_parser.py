@@ -5,6 +5,9 @@ Rule Parser
 """
 from typing import List
 from abc import ABC, abstractmethod
+from .rules import FuzzyCondition
+from .terms import Term
+from .variables import FuzzyVariable, SugenoVariable, SugenoFunction
 
 
 class NameHelper:
@@ -86,5 +89,89 @@ class Lexem(Expression):
         return self.text
 
 
+class KeywordLexem(Lexem):
 
+    def __init__(self, name: str):
+        self.name: str = name
+
+    @property
+    def text(self) -> str:
+        return self.name
+
+    def __str__(self):
+        return self.text
+
+
+class VarLexem(Lexem):
+    """
+    Лексема нечеткой переменной
+    """
+
+    def __init__(self, variable: [FuzzyVariable, SugenoVariable], inp: bool):
+        """
+        Лексема нечеткой переменной
+        :param variable: Нечеткая переменная
+        :param inp: флаг входной переменной нечеткой базы правил
+        """
+        self.variable: [FuzzyVariable, SugenoVariable] = variable
+        self.input: bool = inp
+
+    @property
+    def text(self) -> str:
+        return self.variable.name
+
+    def __str__(self):
+        return self.text
+
+
+class TermLexem(Lexem, AlternativeLexem):
+    """
+    Лексема нечеткого терма
+    """
+
+    def __init__(self, term: [Term, SugenoFunction], inp: bool = True):
+        self.term: [Term, SugenoFunction] = term
+        self.input: bool = inp
+        self.alternative_term: [AlternativeLexem, None] = None
+
+    @property
+    def alternative(self) -> AlternativeLexem:
+        return self.alternative_term
+
+    @alternative.setter
+    def alternative(self, value: AlternativeLexem):
+        self.alternative_term = value
+
+    @property
+    def text(self) -> str:
+        return self.term.name
+
+    def __str__(self):
+        return self.text
+
+
+
+class ConditionExpression(Lexem):
+    def __init__(self, expressions: List[Expression], condition: FuzzyCondition):
+        self.expressions: List[Expression] = expressions
+        self.condition: FuzzyCondition = condition
+
+    @property
+    def text(self) -> str:
+        """
+        Возвращаем текст состояния правила
+        :return:
+        """
+        return ''.join([expression.text for expression in self.expressions])
+
+    def __str__(self):
+        return self.text
+
+
+
+class RuleParser:
+
+    def __init__(self):
+
+        pass
 
