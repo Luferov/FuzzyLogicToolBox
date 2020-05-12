@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
 from .terms import Term
-from .rules import FuzzyCondition
+from .rules import FuzzyCondition, Conditions
 from .types import HedgeType
 from .variables import FuzzyVariable, SugenoVariable, SugenoFunction
 
@@ -279,6 +279,7 @@ class RuleParser:
                 condition: FuzzyCondition = FuzzyCondition(vl.variable, term_lexem, _not, hedge)
                 expressions.append(RuleParser.ConditionExpression(copy_expression[:current + 1], condition))
             else:
+                # Перебираем остальые лексемы
                 expr: RuleParser.Expression = copy_expression[0]
                 if expr in [lexems[op] for op in ['and', 'or', '(', ')']]:
                     expressions.append(expr)
@@ -287,4 +288,20 @@ class RuleParser:
                     raise Exception(f'Лексема {expr.text} найдена в неправильном месте в сотоянии части правила')
         return expressions
 
-
+    @staticmethod
+    def parse_conditions(
+            ce: List[Expression],
+            inp: List[FuzzyVariable],
+            lexems: Dict[str, Lexem]) -> [Conditions, None]:
+        """
+        :param ce: Condition expression
+        :param inp: input variable
+        :param lexems: lexems
+        :return: Condition
+        """
+        expressions: List[RuleParser.Expression] = RuleParser.extract_single_conditions(ce, inp, lexems)
+        if len(expressions) == 0:
+            raise Exception('Нет действительных условий в условиях части правила')
+        # condition: Conditions = RuleParser.parse_conditions_recurse(expressions, lexems)
+        condition = None
+        return condition if isinstance(condition, Conditions) else Conditions()

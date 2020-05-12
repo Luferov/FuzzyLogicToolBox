@@ -24,8 +24,8 @@ class SingleCondition:
 
 class Conditions:
 
-    def __init__(self, conditions: List, op: OperatorType = OperatorType.AND, _not: bool = False):
-        self.conditions: List = conditions
+    def __init__(self, conditions: [List, None] = None, op: OperatorType = OperatorType.AND, _not: bool = False):
+        self.conditions: List = conditions if conditions is not None else []
         self.op: OperatorType = op
         self._not: bool = _not
 
