@@ -3,7 +3,7 @@ Luferov Victor <lyferov@yandex.ru>
 
 Rule Parser
 """
-from typing import List
+from typing import List, Dict
 from abc import ABC, abstractmethod
 from .rules import FuzzyCondition
 from .terms import Term
@@ -48,130 +48,128 @@ class NameHelper:
         return True
 
 
-class Expression(ABC):
+class RuleParser:
     """
-    Abstract class of expressions
-    """
-    @property
-    @abstractmethod
-    def text(self) -> str:
-        ...
-
-
-class AlternativeLexem(ABC):
-    """
-    Alternative lexem
+    Парсим нечеткое правило на лексемы
     """
 
-    @property
-    @abstractmethod
-    def alternative(self) -> 'AlternativeLexem':
-        ...
+    class Expression(ABC):
+        """
+        Abstract class of expressions
+        """
 
-    @alternative.setter
-    @abstractmethod
-    def alternative(self, value: 'AlternativeLexem') -> 'AlternativeLexem':
-        ...
+        @property
+        @abstractmethod
+        def text(self) -> str:
+            ...
 
+    class AlternativeLexem(ABC):
+        """
+        Alternative lexem
+        """
 
-class Lexem(Expression):
-    """
-    Abstract class of Lexems
-    """
+        @property
+        @abstractmethod
+        def alternative(self) -> 'RuleParser.AlternativeLexem':
+            ...
 
-    @property
-    @abstractmethod
-    def text(self) -> str:
-        ...
+        @alternative.setter
+        @abstractmethod
+        def alternative(self, value: 'RuleParser.AlternativeLexem') -> 'RuleParser.AlternativeLexem':
+            ...
 
-    @abstractmethod
-    def __str__(self):
-        return self.text
+    class Lexem(Expression):
+        """
+        Abstract class of Lexems
+        """
 
+        @property
+        @abstractmethod
+        def text(self) -> str:
+            ...
 
-class KeywordLexem(Lexem):
+        @abstractmethod
+        def __str__(self):
+            return self.text
 
-    def __init__(self, name: str):
-        self.name: str = name
+    class KeywordLexem(Lexem):
 
-    @property
-    def text(self) -> str:
-        return self.name
+        def __init__(self, name: str):
+            self.name: str = name
 
-    def __str__(self):
-        return self.text
+        @property
+        def text(self) -> str:
+            return self.name
 
+        def __str__(self):
+            return self.text
 
-class VarLexem(Lexem):
-    """
-    Лексема нечеткой переменной
-    """
-
-    def __init__(self, variable: [FuzzyVariable, SugenoVariable], inp: bool):
+    class VarLexem(Lexem):
         """
         Лексема нечеткой переменной
-        :param variable: Нечеткая переменная
-        :param inp: флаг входной переменной нечеткой базы правил
         """
-        self.variable: [FuzzyVariable, SugenoVariable] = variable
-        self.input: bool = inp
 
-    @property
-    def text(self) -> str:
-        return self.variable.name
+        def __init__(self, variable: [FuzzyVariable, SugenoVariable], inp: bool):
+            """
+            Лексема нечеткой переменной
+            :param variable: Нечеткая переменная
+            :param inp: флаг входной переменной нечеткой базы правил
+            """
+            self.variable: [FuzzyVariable, SugenoVariable] = variable
+            self.input: bool = inp
 
-    def __str__(self):
-        return self.text
+        @property
+        def text(self) -> str:
+            return self.variable.name
 
+        def __str__(self):
+            return self.text
 
-class TermLexem(Lexem, AlternativeLexem):
-    """
-    Лексема нечеткого терма
-    """
-
-    def __init__(self, term: [Term, SugenoFunction], inp: bool = True):
-        self.term: [Term, SugenoFunction] = term
-        self.input: bool = inp
-        self.alternative_term: [AlternativeLexem, None] = None
-
-    @property
-    def alternative(self) -> AlternativeLexem:
-        return self.alternative_term
-
-    @alternative.setter
-    def alternative(self, value: AlternativeLexem):
-        self.alternative_term = value
-
-    @property
-    def text(self) -> str:
-        return self.term.name
-
-    def __str__(self):
-        return self.text
-
-
-
-class ConditionExpression(Lexem):
-    def __init__(self, expressions: List[Expression], condition: FuzzyCondition):
-        self.expressions: List[Expression] = expressions
-        self.condition: FuzzyCondition = condition
-
-    @property
-    def text(self) -> str:
+    class TermLexem(Lexem, AlternativeLexem):
         """
-        Возвращаем текст состояния правила
-        :return:
+        Лексема нечеткого терма
         """
-        return ''.join([expression.text for expression in self.expressions])
 
-    def __str__(self):
-        return self.text
+        def __init__(self, term: [Term, SugenoFunction], inp: bool = True):
+            self.term: [Term, SugenoFunction] = term
+            self.input: bool = inp
+            self.alternative_term: [RuleParser.AlternativeLexem, None] = None
 
+        @property
+        def alternative(self) -> 'RuleParser.AlternativeLexem':
+            return self.alternative_term
 
+        @alternative.setter
+        def alternative(self, value: 'RuleParser.AlternativeLexem'):
+            self.alternative_term = value
 
-class RuleParser:
+        @property
+        def text(self) -> str:
+            return self.term.name
+
+        def __str__(self):
+            return self.text
+
+    class ConditionExpression(Lexem):
+        def __init__(self, expressions: List['RuleParser.Expression'], condition: FuzzyCondition):
+            self.expressions: List['RuleParser.Expression'] = expressions
+            self.condition: FuzzyCondition = condition
+
+        @property
+        def text(self) -> str:
+            """
+            Возвращаем текст состояния правила
+            :return:
+            """
+            return ''.join([expression.text for expression in self.expressions])
+
+        def __str__(self):
+            return self.text
 
     def __init__(self):
 
         pass
+
+
+
 
