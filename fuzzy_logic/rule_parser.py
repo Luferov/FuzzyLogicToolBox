@@ -416,7 +416,7 @@ class RuleParser:
         return SingleCondition(vl.variable, term_lexem.term)
 
     @staticmethod
-    def parse(rule: str, empty: FuzzyRule, inp: List[FuzzyVariable], out: [FuzzyVariable, SugenoVariable]) -> FuzzyRule:
+    def parse(rule: str, inp: List[FuzzyVariable], out: [FuzzyVariable, SugenoVariable]) -> FuzzyRule:
         """
         Парсим правило из строки
         :param rule: строковое представление правила
@@ -443,5 +443,22 @@ class RuleParser:
         if len(expressions) == 0:
             raise Exception('Не найдены допустимые идентификаторы')
         # Находим состояние и вывод частей нечеткого правила
+        if expressions[0] != lexems['if']:
+            raise Exception('"if" должно быть первым идентификаторов')
+        try:
+            then_index: int = expressions.index(lexems['then'])
+        except ValueError:
+            raise Exception('"then" идентификатор не найден')
 
-        return empty
+        if then_index - 1 < 1:
+            raise Exception('Состояние части нечеткого правила не найдено')
+        conclusion_n: int = len(expressions) - then_index - 1
+        if conclusion_n < 1:
+            raise Exception('Заключение части нечеткого правила не найдено')
+        # Забираем условие и следствие
+        condition_expressions: List[RuleParser.Expression] = expressions[1: then_index - 1]
+        conclusion_expressions: List[RuleParser.Expression] = expressions[then_index + 1: conclusion_n]
+
+        conditions: Conditions = RuleParser.parse_conditions(condition_expressions, inp, lexems)
+        conclusion: SingleCondition = RuleParser.parse_conclusion(conclusion_expressions, out, lexems)
+        return FuzzyRule(conditions, conclusion)
