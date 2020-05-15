@@ -25,6 +25,11 @@ class AndMethod(Enum):
     PROD = 2    # a * b
 
 
+class ImplicationMethod(Enum):
+    MIN = 1     # Усечение вывода нечетких множеств
+    PROD = 2    # Масштабирование вывода нечетких множеств
+
+
 class OrMethod(Enum):
     MAX = 1     # max(a, b)
     PROB = 2    # a + b - a * b
@@ -61,3 +66,12 @@ class HedgeType(Enum):
     SOMEWHAT = 2
     VERY = 3
     EXTREMELY = 4
+
+
+class DefazzificationMethod(Enum):
+    """
+    Метод дефаззификации
+    """
+    CENTROID = 1
+    BISECTOR = 2
+    AVERAGE_MAXIMUM = 3

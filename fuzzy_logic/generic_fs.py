@@ -31,6 +31,7 @@ class GenericFuzzySystem:
         for inp in self.inp:
             if inp.name == name:
                 return inp
+        raise Exception(f'Выходной переменной с именем "{name}" не найдено')
 
     def fuzzify(self, inp: Dict[FuzzyVariable, float]) -> Dict[FuzzyVariable, Dict[Term, float]]:
         """
@@ -55,7 +56,6 @@ class GenericFuzzySystem:
         :return:
         """
         if isinstance(condition, Conditions):
-            result: float = .0
             if len(condition.conditions) == 0:
                 raise Exception('Сотояний нет')
             elif len(condition.conditions) == 1:
