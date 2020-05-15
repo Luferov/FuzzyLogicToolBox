@@ -16,18 +16,22 @@ class SingleCondition:
     SugenoVariable - SugenoFunction
     """
 
-    def __init__(self, variable: [FuzzyVariable, SugenoVariable], term: [Term, SugenoFunction], _not: bool = False):
+    def __init__(self, variable: [FuzzyVariable, SugenoVariable], term: [Term, SugenoFunction], not_: bool = False):
         self.variable: [FuzzyVariable, SugenoVariable] = variable
         self.term: [Term, SugenoFunction] = term
-        self._not: bool = _not
+        self.not_: bool = not_
 
 
 class Conditions:
 
-    def __init__(self, conditions: [List, None] = None, op: OperatorType = OperatorType.AND, _not: bool = False):
+    def __init__(self, conditions: [List, None] = None, op: OperatorType = OperatorType.AND, not_: bool = False):
         self.conditions: List = conditions if conditions is not None else []
         self.op: OperatorType = op
-        self._not: bool = _not
+        self.not_: bool = not_
+
+    @property
+    def not_(self):
+        return self.not_
 
 
 class FuzzyCondition(SingleCondition):
@@ -38,10 +42,10 @@ class FuzzyCondition(SingleCondition):
     def __init__(self,
                  variable: [FuzzyVariable, SugenoVariable],
                  term: [Term, SugenoFunction],
-                 _not: bool = False,
+                 not_: bool = False,
                  hedge: HedgeType = HedgeType.NULL):
 
-        super().__init__(variable, term, _not)
+        super().__init__(variable, term, not_)
         self.hedge: HedgeType = hedge
 
 
