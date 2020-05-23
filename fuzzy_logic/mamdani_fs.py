@@ -6,13 +6,13 @@ Mamdani Fuzzy System
 
 from typing import List, Dict
 from .generic_fs import GenericFuzzySystem
-from .rules import FuzzyRule, FuzzyVariable
+from .rules import FuzzyRule
+from .variables import FuzzyVariable
 from .rule_parser import RuleParser
 from .mf import MembershipFunction, CompositeMF, ConstantMF
 from .terms import Term
 from .types import AndMethod, \
     OrMethod, \
-    OperatorType, \
     ImplicationMethod, \
     AggregationMethod, \
     DefazzificationMethod, \
@@ -25,8 +25,8 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
     """
 
     def __init__(self,
-                 inp: List[FuzzyVariable],
-                 out: List[FuzzyVariable],
+                 inp: List[FuzzyVariable] = List[FuzzyVariable],
+                 out: List[FuzzyVariable] = List[FuzzyVariable],
                  am: AndMethod = AndMethod.PROD,
                  om: OrMethod = OrMethod.MAX,
                  im: ImplicationMethod = ImplicationMethod.MIN,
@@ -43,7 +43,6 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
         :param dm: метод дефаззификации
         """
         self.out: List[FuzzyVariable] = out
-        self.rules: List[FuzzyRule] = List[FuzzyRule]
         self.implication_method: ImplicationMethod = im
         self.aggregation_method: AggregationMethod = ag
         self.def_method: DefazzificationMethod = dm
@@ -58,7 +57,7 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
         for out in self.out:
             if out.name == name:
                 return out
-        raise Exception(f'Входной переменной с именем "{name}" не найдено')
+        raise Exception(f'Выходной переменной с именем "{name}" не найдено')
 
     def parse_rule(self, rule: str) -> FuzzyRule:
         """
@@ -77,14 +76,6 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
         fuzzy_result: Dict[FuzzyVariable, MembershipFunction] = self.aggregate(conclusions)     # Агрегация результатов
         result: Dict[FuzzyVariable, float] = self.defuzzify(fuzzy_result)                       # Дефаззафикация
         return result
-
-    def evaluate_conditions(self, fi: Dict[FuzzyVariable, Dict[Term, float]]) -> Dict[FuzzyRule, float]:
-        """
-        Расчитываем заключения по нечетким правилам
-        :param fi: фаззицицированные входные переменные
-        :return:
-        """
-        return {rule: self.evaluate_condition(rule.condition, fi) for rule in self.rules}
 
     def implicate(self, conditions: Dict[FuzzyRule, float]) -> Dict[FuzzyRule, MembershipFunction]:
         """

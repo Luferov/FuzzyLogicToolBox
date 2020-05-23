@@ -1,8 +1,9 @@
 """
-ç
+Luferov Victor <lyferov@yandex.ru>
 
 Fuzzy Terms
 """
+
 from .mf import MembershipFunction
 
 

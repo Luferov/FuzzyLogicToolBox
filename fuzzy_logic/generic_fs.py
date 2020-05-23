@@ -4,9 +4,10 @@ Luferov Victor <lyferov@yandex.ru>
 Generic fuzzy system
 """
 
-from typing import List, Dict, Tuple
+from typing import List, Dict
 from collections import defaultdict
 from .variables import FuzzyVariable
+from .rules import FuzzyRule
 from .terms import Term
 from .rules import Conditions, FuzzyCondition
 from .types import AndMethod, OrMethod, OperatorType, HedgeType
@@ -17,8 +18,12 @@ class GenericFuzzySystem:
     Обобщенная модель нечеткой логики
     """
 
-    def __init__(self, inp: List[FuzzyVariable], am: AndMethod = AndMethod.PROD, om: OrMethod = OrMethod.MAX):
+    def __init__(self,
+                 inp: List[FuzzyVariable],
+                 am: AndMethod = AndMethod.PROD,
+                 om: OrMethod = OrMethod.MAX):
         self.inp: List[FuzzyVariable] = inp
+        self.rules: List[FuzzyRule] = List[FuzzyRule]
         self.and_method: AndMethod = am
         self.or_method: OrMethod = om
 
@@ -32,6 +37,14 @@ class GenericFuzzySystem:
             if inp.name == name:
                 return inp
         raise Exception(f'Выходной переменной с именем "{name}" не найдено')
+
+    def evaluate_conditions(self, fi: Dict[FuzzyVariable, Dict[Term, float]]) -> Dict[FuzzyRule, float]:
+        """
+        Расчитываем заключения по нечетким правилам
+        :param fi: фаззицицированные входные переменные
+        :return:
+        """
+        return {rule: self.evaluate_condition(rule.condition, fi) for rule in self.rules}
 
     def fuzzify(self, inp: Dict[FuzzyVariable, float]) -> Dict[FuzzyVariable, Dict[Term, float]]:
         """

@@ -27,11 +27,11 @@ class Conditions:
     def __init__(self, conditions: [List, None] = None, op: OperatorType = OperatorType.AND, not_: bool = False):
         self.conditions: List = conditions if conditions is not None else []
         self.op: OperatorType = op
-        self.not_: bool = not_
+        self.__not: bool = not_
 
     @property
     def not_(self):
-        return self.not_
+        return self.__not
 
 
 class FuzzyCondition(SingleCondition):
