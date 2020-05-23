@@ -9,6 +9,7 @@ from .generic_fs import GenericFuzzySystem
 from .rules import FuzzyRule, FuzzyVariable
 from .rule_parser import RuleParser
 from .mf import MembershipFunction, CompositeMF, ConstantMF
+from .terms import Term
 from .types import AndMethod, \
     OrMethod, \
     OperatorType, \
@@ -67,7 +68,30 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
         """
         return RuleParser.parse(rule, self.inp, self.out)
 
+    def calculate(self, input_values: Dict[FuzzyVariable, float]) -> Dict[FuzzyVariable, float]:
+        if len(self.rules) == 0:
+            raise Exception('Должно быть как минимум одно правило')
+        fi: Dict[FuzzyVariable, Dict[Term, float]] = self.fuzzify(input_values)                 # Шаг фаззификации
+        conditions: Dict[FuzzyRule, float] = self.evaluate_conditions(fi)                       # Вычисляем состояния
+        conclusions: Dict[FuzzyRule, MembershipFunction] = self.implicate(conditions)           # Вычисляем последствия
+        fuzzy_result: Dict[FuzzyVariable, MembershipFunction] = self.aggregate(conclusions)     # Агрегация результатов
+        result: Dict[FuzzyVariable, float] = self.defuzzify(fuzzy_result)                       # Дефаззафикация
+        return result
+
+    def evaluate_conditions(self, fi: Dict[FuzzyVariable, Dict[Term, float]]) -> Dict[FuzzyRule, float]:
+        """
+        Расчитываем заключения по нечетким правилам
+        :param fi: фаззицицированные входные переменные
+        :return:
+        """
+        return {rule: self.evaluate_condition(rule.condition, fi) for rule in self.rules}
+
     def implicate(self, conditions: Dict[FuzzyRule, float]) -> Dict[FuzzyRule, MembershipFunction]:
+        """
+        Функция импликации
+        :param conditions: заключения
+        :return:
+        """
         def implicate_type(it: ImplicationMethod) -> MfCompositionType:
             if it == ImplicationMethod.MIN:
                 return MfCompositionType.MIN
