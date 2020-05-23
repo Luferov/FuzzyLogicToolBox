@@ -8,7 +8,7 @@ from typing import List, Dict
 from .generic_fs import GenericFuzzySystem
 from .rules import FuzzyRule, FuzzyVariable
 from .rule_parser import RuleParser
-from .mf import MembershipFunction, CompositeMF
+from .mf import MembershipFunction, CompositeMF, ConstantMF
 from .types import AndMethod, \
     OrMethod, \
     OperatorType, \
@@ -66,6 +66,20 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
         :return: нечеткое правило
         """
         return RuleParser.parse(rule, self.inp, self.out)
+
+    def implicate(self, conditions: Dict[FuzzyRule, float]) -> Dict[FuzzyRule, MembershipFunction]:
+        def implicate_type(it: ImplicationMethod) -> MfCompositionType:
+            if it == ImplicationMethod.MIN:
+                return MfCompositionType.MIN
+            elif it == ImplicationMethod.PROD:
+                return MfCompositionType.PROD
+            raise Exception(f'Тип композиции {it} не найден')
+        return {
+            rule: CompositeMF(
+                implicate_type(self.implication_method),
+                ConstantMF(value),
+                rule.conclusion.term.mf) for rule, value in conditions.items()
+        }
 
     def aggregate(self, conclusions: Dict[FuzzyRule, MembershipFunction]) -> Dict[FuzzyVariable, MembershipFunction]:
         """
