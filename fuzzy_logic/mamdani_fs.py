@@ -8,11 +8,20 @@ from typing import List, Dict
 from .generic_fs import GenericFuzzySystem
 from .rules import FuzzyRule, FuzzyVariable
 from .rule_parser import RuleParser
-from .mf import MembershipFunction
-from .types import AndMethod, OrMethod, OperatorType, ImplicationMethod, AggregationMethod, DefazzificationMethod
+from .mf import MembershipFunction, CompositeMF
+from .types import AndMethod, \
+    OrMethod, \
+    OperatorType, \
+    ImplicationMethod, \
+    AggregationMethod, \
+    DefazzificationMethod, \
+    MfCompositionType
 
 
 class MamdaniFuzzySystem(GenericFuzzySystem):
+    """
+
+    """
 
     def __init__(self,
                  inp: List[FuzzyVariable],
@@ -58,7 +67,41 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
         """
         return RuleParser.parse(rule, self.inp, self.out)
 
-    def defuzzify(self, mf: MembershipFunction, min_value: float, max_value: float) -> float:
+    def aggregate(self, conclusions: Dict[FuzzyRule, MembershipFunction]) -> Dict[FuzzyVariable, MembershipFunction]:
+        """
+        Процедура агрегации
+        :param conclusions: заключения
+        :return:
+        """
+        def composite_type(am: AggregationMethod) -> MfCompositionType:
+            if am == AggregationMethod.MAX:
+                return MfCompositionType.MAX
+            elif am == AggregationMethod.SUM:
+                return MfCompositionType.SUM
+            raise Exception(f'Тип композиции {am} не найден')
+        return {
+            variable: CompositeMF(
+                composite_type(self.aggregation_method),
+                *[mf for rule, mf in conclusions.items() if rule.conclusion.variable == variable]
+            ) for variable in self.out
+        }
+
+    def defuzzify(self, fr: Dict[FuzzyVariable, MembershipFunction]) -> Dict[FuzzyVariable, float]:
+        """
+        Дефаззификация нечеткой переменной
+        :param fr: fuzzyResult - результат нечеткой входной переменной
+        :return: результат дефаззификации
+        """
+        return {variable: self.__defuzzify(mf, variable.min_value, variable.max_value) for variable, mf in fr.items()}
+
+    def __defuzzify(self, mf: MembershipFunction, min_value: float, max_value: float) -> float:
+        """
+        Дефаззификация значения
+        :param mf: лингвистический терм
+        :param min_value: минимальное значение
+        :param max_value: максимальное значение
+        :return:
+        """
         if self.def_method == DefazzificationMethod.CENTROID:
             k: int = 1000   # Шаг дефаззицикации
             step = (max_value - min_value) / k
