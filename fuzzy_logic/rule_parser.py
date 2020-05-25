@@ -7,7 +7,6 @@ import re
 from typing import List, Dict
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from copy import deepcopy
 from .terms import Term
 from .types import OperatorType, HedgeType
 from .rules import FuzzyCondition, Conditions, SingleCondition, FuzzyRule
@@ -163,22 +162,31 @@ class RuleParser:
             return self.text
 
     @staticmethod
-    def build_lexemes(inp: List[FuzzyVariable], out: List[FuzzyVariable, SugenoVariable]) -> Dict[str, Lexem]:
+    def build_lexemes(inp: List[FuzzyVariable], out: List[FuzzyVariable or SugenoVariable]) -> Dict[str, Lexem]:
         lexemes: Dict[str, RuleParser.Lexem] = defaultdict(RuleParser.Lexem)
         # Построение ключевых лексем
         for keyword in NameHelper.keywords:
             lexemes[keyword] = RuleParser.KeywordLexem(keyword)
         # Построение лексем входных переменных
         for i in inp:
-            lexemes.update(RuleParser.build_lexemes_list(i, True))
+            RuleParser.build_lexemes_list(i, True, lexemes)
         # Построение лексем выходных переменных
         for o in out:
-            lexemes.update(RuleParser.build_lexemes_list(o, False))
+            RuleParser.build_lexemes_list(o, False, lexemes)
         return lexemes
 
     @staticmethod
-    def build_lexemes_list(variable: [FuzzyVariable, SugenoVariable], inp: bool) -> Dict[str, Lexem]:
-        lexemes: Dict[str, RuleParser.Lexem] = defaultdict(RuleParser.Lexem)
+    def build_lexemes_list(
+            variable: [FuzzyVariable, SugenoVariable],
+            inp: bool,
+            lexemes: Dict[str, Lexem]):
+        """
+        Парсим лексемы переменных
+        :param variable: переменная
+        :param inp: входная или выходная
+        :param lexemes: лексемы
+        :return:
+        """
         lexemes[variable.name] = RuleParser.VarLexem(variable, inp)
         for term in variable.terms:
             term_lexem: RuleParser.TermLexem = RuleParser.TermLexem(term, inp)
@@ -194,7 +202,6 @@ class RuleParser:
                     found_term.alternative_term = term_lexem
                 else:
                     raise Exception(f'Найдена более чем одна лексема с похожими именами: {term_lexem.text}')
-        return lexemes
 
     @staticmethod
     def parse_lexems(rule: str, lexems: Dict[str, Lexem]) -> List[Lexem]:
@@ -212,7 +219,7 @@ class RuleParser:
             condition_expression: List[Expression],
             inp: List[FuzzyVariable],
             lexems: Dict[str, Lexem]) -> List[Expression]:
-        copy_expression: List[RuleParser.Expression] = deepcopy(condition_expression)
+        copy_expression: List[RuleParser.Expression] = condition_expression
         expressions: List[RuleParser.Expression] = []
 
         while len(copy_expression) > 0:
@@ -265,13 +272,16 @@ class RuleParser:
                 alternative_lexem: [RuleParser.AlternativeLexem, None] = copy_expression[current]
                 term_lexem: [RuleParser.TermLexem, None] = None
                 while True:
+                    if alternative_lexem is None:
+                        break
+
                     if isinstance(alternative_lexem, RuleParser.TermLexem):
                         term_lexem = alternative_lexem
                         if isinstance(vl.variable, FuzzyVariable) and term_lexem.term not in vl.variable.terms:
                             term_lexem = None
 
                     alternative_lexem = alternative_lexem.alternative_term
-                    if alternative_lexem is None and term_lexem is not None:
+                    if term_lexem is not None:
                         break
                 if term_lexem is None:
                     raise ValueError(f'Неверный идентификатор "{alternative_lexem.text}" в состоянии части правила')
@@ -279,6 +289,7 @@ class RuleParser:
                 # Добавление нового выражения состояния
                 condition: FuzzyCondition = FuzzyCondition(vl.variable, term_lexem, _not, hedge)
                 expressions.append(RuleParser.ConditionExpression(copy_expression[:current + 1], condition))
+                copy_expression = copy_expression[current + 1:]
             else:
                 # Перебираем остальые лексемы
                 expr: RuleParser.Expression = copy_expression[0]
@@ -303,14 +314,13 @@ class RuleParser:
         expressions: List[RuleParser.Expression] = RuleParser.extract_single_conditions(ce, inp, lexems)
         if len(expressions) == 0:
             raise Exception('Нет действительных условий в условиях части правила')
-        # condition: Conditions = RuleParser.parse_conditions_recurse(expressions, lexems)
-        condition = None
+        condition: Conditions = RuleParser.parse_conditions_recursive(expressions, lexems)
         return condition if isinstance(condition, Conditions) else Conditions()
 
     @staticmethod
     def find_pair_bracket(expressions: List[Expression], lexems: Dict[str, Lexem]) -> int:
         bracket_open: int = 1
-        for i, e in enumerate(expressions):
+        for i, e in enumerate(expressions[1:]):
             if e == lexems['(']:
                 bracket_open += 1
             elif e == lexems[')']:
@@ -338,7 +348,7 @@ class RuleParser:
             return expressions[0].condition
         else:
             conditions: Conditions = Conditions()
-            copy_expression: List[RuleParser.Expression] = deepcopy(expressions)
+            copy_expression: List[RuleParser.Expression] = expressions
             set_or_and: bool = False
             while len(copy_expression) > 0:
                 if copy_expression[0] == lexems['(']:
@@ -347,9 +357,9 @@ class RuleParser:
                     if bracket_close == -1:
                         raise Exception('Ошибка расстановки скобок')
                     condition: [Conditions, SingleCondition] = RuleParser.parse_conditions_recursive(
-                        copy_expression[1:bracket_close - 1], lexems
+                        copy_expression[1: bracket_close], lexems
                     )
-                    copy_expression = copy_expression[0: bracket_close + 1]
+                    copy_expression = copy_expression[bracket_close + 1:]
                 elif isinstance(copy_expression[0], RuleParser.ConditionExpression):
                     condition: [Conditions, SingleCondition] = copy_expression.condition
                     copy_expression = copy_expression[1:]
@@ -381,37 +391,39 @@ class RuleParser:
             expressions: List[Expression],
             out: Dict[str, Lexem],
             lexems: Dict[str, Lexem]) -> SingleCondition:
-        copy_expression: List[RuleParser.Expression] = deepcopy(expressions)
+        copy_expression: List[RuleParser.Expression] = expressions
         # Удаляем лишние скобки
         while len(copy_expression) >= 2 and copy_expression[0] == lexems['('] and copy_expression[-1] == lexems[')']:
             copy_expression = copy_expression[1:-1]
         if len(copy_expression) != 3:
             raise Exception('Вывод части правила должны быть в форме: "переменная есть терм"')
         # Разбор нечеткой переменной
-        if not isinstance(expressions[0], RuleParser.VarLexem):
-            raise Exception(f'Неверный идентификатор {expressions[0].text} в состоянии части правила')
-        vl: RuleParser.VarLexem = expressions[0]
+        if not isinstance(copy_expression[0], RuleParser.VarLexem):
+            raise Exception(f'Неверный идентификатор {copy_expression[0].text} в состоянии части правила')
+        vl: RuleParser.VarLexem = copy_expression[0]
         if vl.input:
             raise Exception('Нечеткая переменная в заключительной части должна быть выходной переменной')
         # Разбор лексемы is
-        if expressions[1] != lexems['is']:
-            raise Exception(f'После переменной {expressions[0].text} должен идти идентификатор "is"')
+        if copy_expression[1] != lexems['is']:
+            raise Exception(f'После переменной {copy_expression[0].text} должен идти идентификатор "is"')
         term_lexem: [RuleParser.TermLexem, None] = None
-        if not isinstance(expressions[2], RuleParser.AlternativeLexem):
-            raise Exception(f'Неверный идентификатор {expressions[2].text} в заключительной части правила')
+        if not isinstance(copy_expression[2], RuleParser.AlternativeLexem):
+            raise Exception(f'Неверный идентификатор {copy_expression[2].text} в заключительной части правила')
         # Разбор терма
-        al: RuleParser.AlternativeLexem = expressions[2]
+        al: RuleParser.AlternativeLexem = copy_expression[2]
         while True:
+            if al is None:
+                break
             if isinstance(al, RuleParser.TermLexem):
                 term_lexem: [RuleParser.TermLexem, None] = al
                 if term_lexem.term not in vl.variable.terms:
                     term_lexem = None
-            al = al.alternative_term if al is not None else None
-            if al is None and term_lexem is not None:
+            al = al.alternative_term
+            if term_lexem is not None:
                 break
 
         if term_lexem is None:
-            raise Exception(f'Неверный идентификатор {expressions[2].text} в заключительной части правила')
+            raise Exception(f'Неверный идентификатор {copy_expression[2].text} в заключительной части правила')
         # Возвращаем нечеткое заключение
         return SingleCondition(vl.variable, term_lexem.term)
 
@@ -430,13 +442,14 @@ class RuleParser:
         clean_rule: str = ''
         for ch in rule:
             if ch in ['(', ')']:
-                if not (len(clean_rule) > 0 and clean_rule[-1] == ''):
-                    clean_rule = f'{clean_rule}{ch} '
+                if not (len(clean_rule) > 0 and clean_rule[-1] == ' '):
+                    clean_rule = f'{clean_rule} '
+                clean_rule = f'{clean_rule}{ch} '
             else:
                 if not (ch == ' ' and len(clean_rule) > 0 and clean_rule[-1] == ''):
-                    clean_rule = f'{clean_rule} '
+                    clean_rule = f'{clean_rule}{ch}'
         # убираем повторяющиеся пробелы
-        clean_rule: str = re.sub(' +', ' ', clean_rule)
+        clean_rule: str = re.sub(' +', ' ', clean_rule).strip()
         # построение словаря лексем
         lexems: Dict[str, RuleParser.Lexem] = RuleParser.build_lexemes(inp, out)
         expressions: List[RuleParser.Expression] = RuleParser.parse_lexems(clean_rule, lexems)
@@ -456,8 +469,8 @@ class RuleParser:
         if conclusion_n < 1:
             raise Exception('Заключение части нечеткого правила не найдено')
         # Забираем условие и следствие
-        condition_expressions: List[RuleParser.Expression] = expressions[1: then_index - 1]
-        conclusion_expressions: List[RuleParser.Expression] = expressions[then_index + 1: conclusion_n]
+        condition_expressions: List[RuleParser.Expression] = expressions[1: then_index]
+        conclusion_expressions: List[RuleParser.Expression] = expressions[then_index + 1:]
 
         conditions: Conditions = RuleParser.parse_conditions(condition_expressions, inp, lexems)
         conclusion: SingleCondition = RuleParser.parse_conclusion(conclusion_expressions, out, lexems)

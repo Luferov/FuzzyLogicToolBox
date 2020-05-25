@@ -23,7 +23,7 @@ class GenericFuzzySystem:
                  am: AndMethod = AndMethod.PROD,
                  om: OrMethod = OrMethod.MAX):
         self.inp: List[FuzzyVariable] = inp
-        self.rules: List[FuzzyRule] = List[FuzzyRule]
+        self.rules: List[FuzzyRule] = []
         self.and_method: AndMethod = am
         self.or_method: OrMethod = om
 
@@ -55,6 +55,7 @@ class GenericFuzzySystem:
         self.validate_input_values(inp)
         result: Dict[FuzzyVariable, Dict[Term, float]] = defaultdict(Dict[Term, float])
         for variable in self.inp:
+            result[variable] = defaultdict(float)
             for term in variable.terms:
                 result[variable][term] = term.mf.get_value(inp[variable])
         return result
@@ -82,7 +83,7 @@ class GenericFuzzySystem:
                         condition.op)
             return 1.0 - result if condition.not_ else result
         elif isinstance(condition, FuzzyCondition):
-            result: float = fi[condition.variable][condition.term]
+            result: float = fi[condition.variable][condition.term.term]
             # Навешиваем модификатор
             if condition.hedge == HedgeType.SLIGHTLY:
                 result = result ** (1. / 3.)

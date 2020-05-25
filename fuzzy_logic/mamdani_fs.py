@@ -25,9 +25,9 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
     """
 
     def __init__(self,
-                 inp: List[FuzzyVariable] = List[FuzzyVariable],
-                 out: List[FuzzyVariable] = List[FuzzyVariable],
-                 am: AndMethod = AndMethod.PROD,
+                 inp=None,
+                 out=None,
+                 am: AndMethod = AndMethod.MIN,
                  om: OrMethod = OrMethod.MAX,
                  im: ImplicationMethod = ImplicationMethod.MIN,
                  ag: AggregationMethod = AggregationMethod.MAX,
@@ -42,11 +42,11 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
         :param ag: метод неечткого агрегирования
         :param dm: метод дефаззификации
         """
-        self.out: List[FuzzyVariable] = out
+        self.out: List[FuzzyVariable] = out if out is not None else []
         self.implication_method: ImplicationMethod = im
         self.aggregation_method: AggregationMethod = ag
         self.def_method: DefazzificationMethod = dm
-        super().__init__(inp, am, om)
+        super().__init__(inp if inp is not None else [], am, om)
 
     def output_by_name(self, name: str) -> FuzzyVariable:
         """
@@ -134,28 +134,14 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
         if self.def_method == DefazzificationMethod.CENTROID:
             k: int = 1000   # Шаг дефаззицикации
             step = (max_value - min_value) / k
-            val_right: float = .0
-            val2_right: float = .0
             numerator: float = 0
             denominator: float = 0
             for i in range(k):
-                if i == 0:
-                    pt_right: float = min_value
-                    val_right: float = mf.get_value(pt_right)
-                    val2_right: float = pt_right * val_right
-                pt_center: float = min_value + step * (i + .5)
-                pt_right: float = min_value + step * (i + 1)
-
-                val_left: float = val_right
-                val_center: float = mf.get_value(pt_center)
-                val_right: float = mf.get_value(pt_right)
-
-                val2_left: float = val2_right
-                val2_center: float = pt_center * val_center
-                val2_right: float = pt_right * val_right
-
-                numerator += step * (val2_left + 4 * val2_center + val2_right) / 3.0
-                denominator += step * (val_left + 4 * val_center + val2_right) / 3.0
-            return numerator / denominator
+                pt_center = min_value + step * float(i)
+                val_center = mf.get_value(pt_center)
+                val2_center = pt_center * val_center
+                numerator += val2_center
+                denominator += val_center
+            return round(numerator / denominator, 8) if denominator != 0 else 0.0
         else:
             raise Exception(f'Метод дефаззификации {self.def_method} не реализован')

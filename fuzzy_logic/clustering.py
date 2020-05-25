@@ -31,7 +31,7 @@ class SubtractClustering:
     def run(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Запускаем алгоритм горной кластеризации
-        :return:
+        :return: centers, sigmas
         """
         num_params, num_points = self.x.shape   # Количество столбцов, количетсво строк
         accum_multp: np.ndarray = 1. / self.radii
