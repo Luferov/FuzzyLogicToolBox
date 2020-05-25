@@ -132,7 +132,7 @@ class MamdaniFuzzySystem(GenericFuzzySystem):
         :return:
         """
         if self.def_method == DefazzificationMethod.CENTROID:
-            k: int = 1000   # Шаг дефаззицикации
+            k: int = 101   # Шаг дефаззицикации
             step = (max_value - min_value) / k
             numerator: float = 0
             denominator: float = 0
