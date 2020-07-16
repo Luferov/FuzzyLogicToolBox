@@ -22,6 +22,7 @@ output = FuzzyVariable(
 )
 
 mf: MamdaniFuzzySystem = MamdaniFuzzySystem([input1, input2], [output])
+mf.rules.append(mf.parse_rule('if (input1 is mf1) and (input2 is mf1) then (output is mf1)'))
 mf.rules.append(mf.parse_rule('if (input1 is mf2) and (input2 is mf2) then (output is mf2)'))
-result = mf.calculate({input1: 0.5, input2: 0.5})
+result = mf.calculate({input1: 0.45, input2: 0.45})
 pprint(result)
