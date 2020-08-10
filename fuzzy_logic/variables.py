@@ -31,6 +31,10 @@ class FuzzyVariable:
             if term.name == name:
                 return term
 
+    @property
+    def values(self):
+        return self.terms
+
 
 class SugenoFunction(ABC):
     """
@@ -71,11 +75,15 @@ class SugenoVariable:
     Sugeno variable
     """
 
-    def __init__(self, name: str, functions: List[SugenoFunction]):
+    def __init__(self, name: str, *functions: SugenoFunction):
         self.name: str = name
-        self.functions: List[SugenoFunction] = functions
+        self.functions: List[SugenoFunction] = list(functions)
 
     def function_by_name(self, name: str) -> SugenoFunction:
         for function in self.functions:
             if function.name == name:
                 return function
+
+    @property
+    def values(self):
+        return self.functions

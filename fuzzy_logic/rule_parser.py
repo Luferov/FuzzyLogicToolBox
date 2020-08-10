@@ -188,7 +188,7 @@ class RuleParser:
         :return:
         """
         lexemes[variable.name] = RuleParser.VarLexem(variable, inp)
-        for term in variable.terms:
+        for term in variable.values:
             term_lexem: RuleParser.TermLexem = RuleParser.TermLexem(term, inp)
             if term_lexem.text not in lexemes:
                 # Если такой лексемы нет
@@ -416,7 +416,7 @@ class RuleParser:
                 break
             if isinstance(al, RuleParser.TermLexem):
                 term_lexem: [RuleParser.TermLexem, None] = al
-                if term_lexem.term not in vl.variable.terms:
+                if term_lexem.term not in vl.variable.values:
                     term_lexem = None
             al = al.alternative_term
             if term_lexem is not None:
