@@ -39,6 +39,85 @@ class Anfis(SugenoFuzzySystem):
         self.__nu_step: float = .9                  # Изменение nu на каждом шаге
         self.__rules_text: List[str] = []           # Текстовое представление правил
 
+    @property
+    def radii(self) -> float:
+        """
+        :return: Радиус кластеров
+        """
+        return self.__radii
+
+    @radii.setter
+    def radii(self, value):
+        if value < 0:
+            raise Exception(f'Значение radii не может быть меньше 0')
+        self.__radii = value
+
+    @property
+    def sqsh_factor(self) -> float:
+        """
+        :return: Коэффициент подавления
+        """
+        return self.__sqsh_factor
+
+    @sqsh_factor.setter
+    def sqsh_factor(self, value):
+        if value < 0:
+            raise Exception(f'Значение sqsh_factor не может быть меньше 0')
+        self.__sqsh_factor = value
+
+    @property
+    def reject_ratio(self) -> float:
+        """
+        :return: Коэффициент принятия
+        """
+        return self.__accept_ratio
+
+    @reject_ratio.setter
+    def reject_ratio(self, value):
+        """
+        :param value: Коэффициент отторжения
+        :return:
+        """
+        if value < 0:
+            raise Exception(f'Значение reject_ratio не может быть меньше 0')
+        self.__reject_ratio = value
+
+    @property
+    def nu(self) -> float:
+        """
+        :return: получение коэффициента обучения
+        """
+        return self.__nu
+
+    @nu.setter
+    def nu(self, value):
+        """
+        :param value: значение коэффициента обучения
+        :return:
+        """
+        if not 0 < value < 1:
+            raise Exception(f'Значение должны быть в пределах 0 < {value} < 1')
+        self.__nu = value
+
+    @property
+    def epochs(self) -> float:
+        """
+        :return: получение эпох для получения
+        """
+        return self.__epochs
+
+    @epochs.setter
+    def epochs(self, value):
+        if value < 0:
+            raise Exception(f'Значение не может быть меньше 0')
+        self.__epochs = value
+
+    @property
+    def errors_train(self) -> List[float]:
+        """
+        :return: Ошибка при обучении Anfis
+        """
+        return self.__errors_train
 
 
 
