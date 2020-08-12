@@ -119,7 +119,29 @@ class Anfis(SugenoFuzzySystem):
         """
         return self.__errors_train
 
+    def calculate(self, x: np.ndarray) -> Dict[SugenoVariable, float]:
+        """
+        Рассчитываем значение anfis
+        :param x: вектор входных значений
+        :return:
+        """
 
+        pass
 
+    def train(self):
+        """
+        Обучаем Anifs
+        :return:
+        """
 
+        pass
 
+    def generate(self):
+        """
+        Генерируем anfis
+        :return:
+        """
+        pass
+
+    def __set_coefficient(self, c: np.ndarray):
+        pass
