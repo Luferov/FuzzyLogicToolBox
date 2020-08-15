@@ -119,14 +119,34 @@ class Anfis(SugenoFuzzySystem):
         """
         return self.__errors_train
 
-    def calculate(self, x: np.ndarray) -> Dict[SugenoVariable, float]:
+    @property
+    def count_input(self) -> float:
+        """
+        :return: Количество входных временных рядов
+        """
+        return self.x.shape[0]
+
+    @property
+    def count_output(self) -> float:
+        """
+        :return: Количество выходных точек
+        """
+        return self.y.shape[0]
+
+    def calculate(self, x: List[float]) -> float:
         """
         Рассчитываем значение anfis
         :param x: вектор входных значений
         :return:
         """
-
-        pass
+        if len(x) == self.count_input:
+            raise Exception(f'Количество входных значений и переменных разное: {len(x)} != {self.count_input}.')
+        if len(self.inp) == 0:
+            raise Exception('Нет входных переменных, возможно она не обучена.')
+        return super(Anfis, self) \
+            .calculate({
+                self.inp[i]: e for i, e in enumerate(x)
+            })[super(Anfis, self).output_by_name(self.name_output)]
 
     def train(self):
         """
