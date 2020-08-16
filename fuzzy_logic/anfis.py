@@ -1,27 +1,37 @@
 import numpy as np
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from collections import defaultdict
 from .sugeno_fs import SugenoFuzzySystem
 from .rules import FuzzyRule
 from .rule_parser import RuleParser
-from .variables import FuzzyVariable, SugenoVariable, SugenoFunction
+from .variables import FuzzyVariable, SugenoVariable, SugenoFunction, LinearSugenoFunction
 from .terms import Term
+from .mf import NormalMF
 from .types import AndMethod, OrMethod
+from .clustering import SubtractClustering
 
 
 class Anfis(SugenoFuzzySystem):
-
-    name_input: str = 'input'           # Имена входных переменных
-    name_output: str = 'output1'        # Имя выходной переменной
-    name_mf: str = 'mf'                 # Имена лингвистических термов
+    name_input: str = 'input'  # Имена входных переменных
+    name_output: str = 'output'  # Имя выходной переменной
+    name_mf: str = 'mf'  # Имена лингвистических термов
 
     def __init__(self,
-                 x: np.ndarray,                     # Вектор входа
-                 y: np.ndarray,                     # Вектор выхода
-                 radii: float = .5,                 # Радиус кластеров
-                 sf: float = 1.25,                  # Коэффициент принятия
-                 ar: float = .5,                    # Коэффициент принятия
-                 rr: float = .15):                  # Коэффициент отторжения
+                 x: np.ndarray,  # Вектор входа
+                 y: np.ndarray,  # Вектор выхода
+                 radii: float = .5,  # Радиус кластеров
+                 sf: float = 1.25,  # Коэффициент принятия
+                 ar: float = .5,  # Коэффициент принятия
+                 rr: float = .15):  # Коэффициент отторжения
+        """
+
+        :param x: Вектор входа [[], []]
+        :param y: Вектор выхода []
+        :param radii: Радиус кластеров
+        :param sf: Коэффициент принятия
+        :param ar: Коэффициент принятия
+        :param rr: Коэффициент отторжения
+        """
         super().__init__()
         # Обучающая выборка
         self.x: np.ndarray = x
@@ -32,12 +42,16 @@ class Anfis(SugenoFuzzySystem):
         self.__accept_ratio: float = ar
         self.__reject_ratio: float = rr
         # Переменные обучения
-        self.__error = .0                           # Желательная ошибка при обучении
-        self.__epochs = 10                          # Количество эпох обучения
-        self.__errors_train: List[float] = []       # Ошибки при обучении на каждой эпохе
-        self.__nu: float = .1                       # Коэффициент обучения
-        self.__nu_step: float = .9                  # Изменение nu на каждом шаге
-        self.__rules_text: List[str] = []           # Текстовое представление правил
+        self.__error = .0  # Желательная ошибка при обучении
+        self.__epochs = 10  # Количество эпох обучения
+        self.__errors_train: List[float] = []  # Ошибки при обучении на каждой эпохе
+        self.__nu: float = .1  # Коэффициент обучения
+        self.__nu_step: float = .9  # Изменение nu на каждом шаге
+        self.__rules_text: List[str] = []  # Текстовое представление правил
+
+    @property
+    def rules_text(self) -> List[str]:
+        return self.__rules_text
 
     @property
     def radii(self) -> float:
@@ -64,6 +78,14 @@ class Anfis(SugenoFuzzySystem):
         if value < 0:
             raise Exception(f'Значение sqsh_factor не может быть меньше 0')
         self.__sqsh_factor = value
+
+    @property
+    def accept_ratio(self) -> float:
+        return self.__accept_ratio
+
+    @accept_ratio.setter
+    def accept_ratio(self, value):
+        self.__accept_ratio = value
 
     @property
     def reject_ratio(self) -> float:
@@ -120,14 +142,14 @@ class Anfis(SugenoFuzzySystem):
         return self.__errors_train
 
     @property
-    def count_input(self) -> float:
+    def count_input(self) -> int:
         """
         :return: Количество входных временных рядов
         """
         return self.x.shape[0]
 
     @property
-    def count_output(self) -> float:
+    def count_output(self) -> int:
         """
         :return: Количество выходных точек
         """
@@ -145,23 +167,147 @@ class Anfis(SugenoFuzzySystem):
             raise Exception('Нет входных переменных, возможно она не обучена.')
         return super(Anfis, self) \
             .calculate({
-                self.inp[i]: e for i, e in enumerate(x)
-            })[super(Anfis, self).output_by_name(self.name_output)]
+            self.inp[i]: e for i, e in enumerate(x)
+        })[super(Anfis, self).output_by_name(self.name_output)]
 
     def train(self):
         """
         Обучаем Anifs
         :return:
         """
+        self.generate()
+        if len(self.rules) == 0:
+            raise Exception('Должно быть хотя бы одно нечеткое правило.')
+        k: int = len(self.y)                            # Количество параметров обучающей выборки
+        l: int = (len(self.x) + 1) * len(self.rules)    # (m + 1) * n - количество входных переменных
+        c: np.ndarray = np.array((l, 1))
+        y: np.ndarray = np.array(self.y)                # Вектор столбец выходных данных
+        self.__errors_train = []                        # Обнуляем ошибку обучения
+        for current_epoch in range(self.__epochs):
+            # Формируем матрицу коэффициентов
+            w: np.ndarray = np.zeros((k, l))
+            ew: np.ndarray = np.zeros((k, len(self.rules)))
+            for i in range(k):
+                # Агрегирование подусловий
+                rules_weight: Dict[FuzzyRule, float] = self.evaluate_conditions(
+                    self.fuzzify({variable: self.x[j][i] for j, variable in enumerate(self.inp)})
+                )
+                ew[i, :] = np.array([*rules_weight.values()], float)
+                beta: np.ndarray = ew[i, :] / sum(rules_weight.values())
+                # Формируем входные переменные
+                x: np.ndarray = np.ones(self.count_input + 1)   # +1, тк x0 = 1
+                x[1:] = self.x[:, i]
+                column_weight: int = 0
+                for g in beta:                          # перебираем по заключениям
+                    for d in x:                         # Перебираем по входным данным
+                        w[i, column_weight] = g * d     # Перемножаем коэффициенты на переменные
+                        column_weight += 1              # Увеличиваем строку на 1
 
-        pass
+            c = np.linalg.pinv(w) * y
+            y_hatch: np.ndarray = w * c                 # Фактический выход сети
+            # Правим коэффициенты
+            for i, fv in enumerate(self.inp):
+                for j, term in enumerate(fv.terms):
+                    if not isinstance(term.mf, NormalMF):
+                        # Пока что меняем только в том случае, если функция принадлежности колоколообразная
+                        continue
+                    mf: NormalMF = term.mf
+                    # Перебираем все переменные, k - количество входных переменных
+                    for g in range(k):
+                        xa: float = self.x[i][g] - mf.b
+                        yy_hatch = y_hatch[g, 0] - self.y[g]    # y' - y
+                        p: float = ew[g, j]
+                        sp: float = sum(ew[g, :])
+                        pb: float = p / (sp / mf.sigma ** 2)
+                        # Инициализирум матрицы для нахождения C
+                        x: np.ndarray = np.ones((1, self.count_input + 1))
+                        c_hatch: np.ndarray = np.ones((self.count_input + 1, 1))
+                        x[1:] = self.x[:, g]
+                        # Заполняем коэффициенты
+                        start: int = j * (self.count_input + 1)
+                        c_hatch[:, 0] = c[start:start + (self.count_input + 1), 0]
+                        # Умножаем матрицы
+                        cy: float = (x * c)[0] - y_hatch[g, 0]
+                        mf.b -= 2 * self.nu * xa * yy_hatch * cy * pb                  # Корректируем b
+                        mf.sigma -= 2 * self.nu * (xa ** 2) * yy_hatch * cy * pb       # Корректируем sigma
+            # Находим ошибку обучения на этапе
+            self.__errors_train[current_epoch] = sum([.5 * (y_hatch[:, 0] - self.y) ** 2])
+        # Применяем параметры коэффициентов y = c0 + c1 * x1 + c2 * x2 + ... + ci * xi
+        self.__set_coefficient(c)
+        # Перезаписываем правила в силу ссылочного типа архитектуры
+        self.rules = [self.parse_rule(rule) for rule in self.__rules_text]
 
     def generate(self):
         """
         Генерируем anfis
         :return:
         """
-        pass
+        x: np.ndarray = np.vstack((self.x, self.y))
+        # Кластеризация данных
+        centers, sigmas = SubtractClustering(
+            x,
+            np.array([self.radii for _ in self.out]),
+            self.sqsh_factor,
+            self.accept_ratio,
+            self.reject_ratio
+        )()
+        # Разделяем на две части
+        centers_in: np.ndarray = centers[:-1]
+        centers_out: np.ndarray = centers[-1]
+        sigmas_in: np.ndarray = sigmas[:-1]
+
+        # Формируем входные переменные
+        self.inp = [
+            FuzzyVariable(
+                f'{self.name_input}{i + 1}',
+                np.min(self.x[i]),
+                np.max(self.x[i]),
+                *[
+                    Term(f'{self.name_mf}{j + 1}', NormalMF(center, sigmas_in[i]))
+                    for j, center in enumerate(center_in)
+                ]
+            ) for i, center_in in enumerate(centers_in)
+        ]
+        # Формируем выходные переменные нулевыми значениями
+        self.out = [
+            SugenoVariable(
+                f'{self.name_output}{i + 1}',
+                *[
+                    LinearSugenoFunction(
+                        f'{self.name_mf}{j + 1}',
+                        {variable: .0 for variable in self.inp},    # По умолчанию нулевые значения
+                        center                                      # По умолчанию константа как центр
+                    ) for j, center in enumerate(center_out)
+                ]
+            ) for i, center_out in enumerate(centers_out)
+        ]
+        # Формируем нечеткую продукционную базу правил if (input1 is mf1) and (input2 is mf2) then (output1 is mf1)
+        for i in range(centers_out.shape[0]):
+            rule = 'if'
+            for j in range(centers_in.shape[0]):
+                rule += f' ({self.name_input}{j + 1} is {self.name_mf}{i + 1}) '
+                if j != centers_in.shape[0] - 1:
+                    rule += 'and'
+            rule += f'then ({self.name_output}1 is {self.name_output}{i + 1})'
+            self.__rules_text.append(rule)
+            self.rules.append(self.parse_rule(rule))
 
     def __set_coefficient(self, c: np.ndarray):
-        pass
+        """
+        Устанавливаем функции принадлежности выходной переменной
+        :param c: Матрица коэффициентов
+        """
+        for i, function in enumerate(self.output_by_name(self.name_output).functions):
+            if isinstance(function, LinearSugenoFunction):
+                # Настройка фукнции принадлежности y = c0 + c1 * x1 + c2 * x2 + ... + ci * xi
+                m: int = self.count_input + 1  # т.к. с0 <- +1
+                start_position: int = i * m  # Позиция функции принадлежности в матрицы
+                coefficients: np.ndarray = c[start_position: start_position + m, 0]
+                # Создаем новую функцию принадлежности
+                self.output_by_name(self.name_output).functions[i] = LinearSugenoFunction(
+                    function.name,
+                    {variable: coefficients[j + 1] for j, variable in enumerate(self.out)},
+                    coefficients[0]
+                )
+            else:
+                raise Exception(f'Предусмотрено использование только LinearSugenoFunction в Anfis.')

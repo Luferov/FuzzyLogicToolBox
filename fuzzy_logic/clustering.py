@@ -28,7 +28,7 @@ class SubtractClustering:
         self.ar: float = ar
         self.rr: float = rr
 
-    def run(self) -> Tuple[np.ndarray, np.ndarray]:
+    def __call__(self, *args, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Запускаем алгоритм горной кластеризации
         :return: centers, sigmas
