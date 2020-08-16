@@ -4,8 +4,9 @@ Luferov Victor <lyferov@yandex.ru>
 SubtractClustesing - горная кластеризация
 """
 
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 import numpy as np
+from pprint import pprint
 
 
 class SubtractClustering:
@@ -96,6 +97,6 @@ class SubtractClustering:
                 max_potential: np.ndarray = potential_values.max()
                 max_potential_index: int = potential_values.argmax()
         # Денормализация данных с использованием min_x and max_x
-        centers: np.ndarray = (centers * (max_x - min_x)[:, np.newaxis]) + min_x[:, np.newaxis]
+        centers: np.ndarray = (centers * (max_x - min_x) + min_x).transpose()
         sigmas: np.ndarray = (self.radii * (max_x - min_x)) / 8 ** .5
         return centers, sigmas
