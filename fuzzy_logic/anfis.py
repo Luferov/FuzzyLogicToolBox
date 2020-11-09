@@ -6,7 +6,6 @@ from .variables import FuzzyVariable, SugenoVariable, LinearSugenoFunction
 from .terms import Term
 from .mf import NormalMF
 from .clustering import SubtractClustering
-from pprint import pprint
 
 
 class Anfis(SugenoFuzzySystem):

@@ -6,7 +6,6 @@ SubtractClustesing - горная кластеризация
 
 from typing import List, Tuple
 import numpy as np
-from pprint import pprint
 
 
 class SubtractClustering:
@@ -71,7 +70,7 @@ class SubtractClustering:
                 min_dest_sq = -1.
                 for center in centers:
                     dx_sq: np.ndarray = np.sum([
-                        np.power((max_point[i] - center[i]) * accum_multp[i], 2) for i in num_params
+                        np.power((max_point[i] - center[i]) * accum_multp[i], 2) for i in range(num_params)
                     ])
                     if min_dest_sq < 0 or dx_sq < min_dest_sq:
                         min_dest_sq = dx_sq
