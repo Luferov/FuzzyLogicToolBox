@@ -89,7 +89,7 @@ class Anfis(SugenoFuzzySystem):
         """
         :return: Коэффициент принятия
         """
-        return self.__accept_ratio
+        return self.__reject_ratio
 
     @reject_ratio.setter
     def reject_ratio(self, value):
